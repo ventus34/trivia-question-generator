@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Trivia</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <div class="main-layout">
+        <div class="left-col">
+            <div class="panel">
+                <div class="panel-header" onclick="toggleConfig()">
+                    <h2 data-i18n="configTitle">⚙️ Konfiguracja</h2>
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <div class="lang-selector" onclick="event.stopPropagation()"></div>
+                        <span class="toggle-icon" id="configToggleIcon">▼</span>
+                    </div>
+                </div>
+                
+                <div class="config-content" id="configContent">
+                    <div class="form-row">
+                        <div>
+                            <label data-i18n="providerLabel">Dostawca LLM:</label>
+                            <select id="providerSelect" onchange="updateProviderUI()">
+                                <option value="openrouter">OpenRouter</option>
+                                <option value="openai">OpenAI</option>
+                                <option value="lmstudio">LM Studio</option>
+                                <option value="ollama">Ollama</option>
+                                <option value="custom" data-i18n="customProvider">Niestandardowe (OpenAI API)</option>
+                            </select>
+                        </div>
+                        <div id="baseUrlContainer" style="display: none;">
+                            <label data-i18n="baseUrlLabel">Base URL:</label>
+                            <input type="text" id="baseUrlInput" placeholder="np. http://localhost:1234/v1" />
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div id="apiKeyContainer">
+                            <label><span data-i18n="apiKeyLabel">Klucz API</span> <span id="keyOptionalLabel" style="font-size: 11px; color: #888;"></span>:</label>
+                            <input type="password" id="apiKeyInput" placeholder="sk-..." />
+                        </div>
+                        <div style="display: flex; align-items: flex-end;">
+                            <button class="btn-primary" id="fetchModelsBtn" onclick="fetchModels()" style="width: 100%;" data-i18n="fetchModels">Pobierz Modele</button>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div>
+                            <label data-i18n="selectModelLabel">Wybierz Model:</label>
+                            <select id="modelSelect">
+                                <option value="" data-i18n="modelPlaceholder">Najpierw podaj klucz i pobierz modele...</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div>
+                            <label data-i18n="difficultyLabel">Poziom trudności:</label>
+                            <select id="difficultySelect">
+                                <option value="Bardzo łatwy (dla dzieci, powszechna podstawowa wiedza)" data-i18n="diffKids" data-i18n-val="diffKidsVal">Dziecko</option>
+                                <option value="Łatwy (powszechnie znane fakty)" data-i18n="diffEasy" data-i18n-val="diffEasyVal">Łatwy</option>
+                                <option value="Średni" selected data-i18n="diffMedium" data-i18n-val="diffMediumVal">Średni</option>
+                                <option value="Trudny (wymaga specjalistycznej wiedzy)" data-i18n="diffHard" data-i18n-val="diffHardVal">Trudny</option>
+                                <option value="Ekspert (niezwykle niszowe i trudne detale)" data-i18n="diffExpert" data-i18n-val="diffExpertVal">Ekspert</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label data-i18n="exclusionsLabel">Ręczne wykluczenia (dla wszystkich kategorii jednocześnie):</label>
+                        <textarea id="avoid" rows="2" data-i18n="exclusionsPlaceholder" placeholder="Wpisz np. II Wojna Światowa..."></textarea>
+                        
+                        <div class="memory-info">
+                            <div>
+                                <button class="btn-secondary" onclick="toggleDebug()" data-i18n="toggleDebug">🐛 Debug</button>
+                            </div>
+                            <div>
+                                <span data-i18n="askedStats">Zadane:</span> <span id="memoryStats" style="color: #fff; font-weight: bold;">0</span> |
+                                <span data-i18n="cacheStats">W puli (cache):</span> <span id="cacheStats" style="color: #4ade80; font-weight: bold;">0</span> 
+                                <a href="#" onclick="clearMemory(event)" data-i18n="clearMemory">Wyczyść</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label style="margin-top: 15px;" data-i18n="catSetupLabel">Konfiguracja kategorii:</label>
+                        <div class="cat-setup-grid">
+                            <input type="text" id="cat-in-1" value="Muzyka" style="border-left: 5px solid var(--cat-1)" oninput="updateCatBtns()" data-i18n="cat1">
+                            <input type="text" id="cat-in-2" value="Podróże" style="border-left: 5px solid var(--cat-2)" oninput="updateCatBtns()" data-i18n="cat2">
+                            <input type="text" id="cat-in-3" value="Lifestyle" style="border-left: 5px solid var(--cat-3)" oninput="updateCatBtns()" data-i18n="cat3">
+                            <input type="text" id="cat-in-4" value="Kuchnie Świata" style="border-left: 5px solid var(--cat-4)" oninput="updateCatBtns()" data-i18n="cat4">
+                            <input type="text" id="cat-in-5" value="Filmy i Seriale" style="border-left: 5px solid var(--cat-5)" oninput="updateCatBtns()" data-i18n="cat5">
+                            <input type="text" id="cat-in-6" value="Kim jestem?" style="border-left: 5px solid var(--cat-6)" oninput="updateCatBtns()" data-i18n="cat6">
+                        </div>
+                    </div>
+                </div> <!-- Koniec config-content -->
+            </div>
+            
+            <div id="debug-panel">
+                <div class="debug-section">
+                    <h3 data-i18n="debugBp">Etap 1: Szukanie Tematu (Blueprint)</h3>
+                    <span class="debug-label" data-i18n="debugSent">Wysłany Payload:</span>
+                    <pre id="debug-bp-payload" data-i18n="debugWait">Oczekiwanie...</pre>
+                    <span class="debug-label" data-i18n="debugResp">Zwrócona odpowiedź:</span>
+                    <pre id="debug-bp-response" data-i18n="debugWait">Oczekiwanie...</pre>
+                </div>
+                <div class="debug-section">
+                    <h3 data-i18n="debugQ">Etap 2: Układanie Pytania</h3>
+                    <span class="debug-label" data-i18n="debugSent">Wysłany Payload:</span>
+                    <pre id="debug-q-payload" data-i18n="debugWait">Oczekiwanie...</pre>
+                    <span class="debug-label" data-i18n="debugResp">Zwrócona odpowiedź:</span>
+                    <pre id="debug-q-response" data-i18n="debugWait">Oczekiwanie...</pre>
+                </div>
+            </div>
+
+            <div id="status" data-i18n="statusInit">Wpisz klucz API, aby rozpocząć.</div>
+
+            <div class="categories-grid">
+                <button class="cat-btn btn-cat1" id="btn-cat1" onclick="generate(document.getElementById('cat-in-1').value, 'var(--cat-1)')">Muzyka</button>
+                <button class="cat-btn btn-cat2" id="btn-cat2" onclick="generate(document.getElementById('cat-in-2').value, 'var(--cat-2)')">Podróże</button>
+                <button class="cat-btn btn-cat3" id="btn-cat3" onclick="generate(document.getElementById('cat-in-3').value, 'var(--cat-3)')">Lifestyle</button>
+                <button class="cat-btn btn-cat4" id="btn-cat4" onclick="generate(document.getElementById('cat-in-4').value, 'var(--cat-4)')">Kuchnie Świata</button>
+                <button class="cat-btn btn-cat5" id="btn-cat5" onclick="generate(document.getElementById('cat-in-5').value, 'var(--cat-5)')">Filmy i Seriale</button>
+                <button class="cat-btn btn-cat6" id="btn-cat6" onclick="generate(document.getElementById('cat-in-6').value, 'var(--cat-6)')">Kim jestem?</button>
+            </div>
+        </div> 
+        
+        <div class="right-col">
+            <div id="active-question">
+                <div id="q-color-bar" class="q-cat-label" data-i18n="categoryPlaceholder">Kategoria</div>
+                <div class="q-text" id="q-text" data-i18n="qPlaceholder">Pytanie...</div>
+                <div class="q-options" id="q-options"></div>
+                <div class="q-explanation" id="q-explanation" data-i18n="explanationPlaceholder">Wyjaśnienie</div>
+            </div>
+        </div> 
+    </div> 
+
+    <!-- FLOAT BUTTON -->
+    <button class="fab-toggle" onclick="toggleSidebar()" title="Panel Graczy">👥</button>
+
+    <!-- SIDEBAR (PLANSZA GRACZY) -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+    <div class="sidebar" id="sidebar" onclick="event.stopPropagation()">
+        <div class="sidebar-header">
+            <h2 data-i18n="sidebarTitle">👥 Asystent Gry</h2>
+            <button class="close-btn" onclick="toggleSidebar()">×</button>
+        </div>
+
+        <div class="game-mode-panel">
+            <label data-i18n="gameModeLabel">Tryb gry (bez planszy):</label>
+            <div style="display: flex; gap: 10px;">
+                <select id="gameModeSelect" onchange="changeGameMode(this.value)" style="flex: 1; padding: 8px;">
+                    <option value="colors" data-i18n="modeColors">Zbierz 6 Kolorów</option>
+                    <option value="countdown" data-i18n="modeCountdown">Odliczanie do 0</option>
+                    <option value="points" data-i18n="modePoints">Wyścig na punkty</option>
+                </select>
+                <input type="number" id="targetScoreInput" value="10" onchange="changeTargetScore(this.value)" style="display:none; width: 70px; padding: 8px; text-align: center;" title="Punkt startowy / cel">
+            </div>
+        </div>
+
+        <div class="tools-grid">
+            <div class="dice-panel">
+                <div class="dice-result" id="diceResult"><span style="font-size: 24px;">🎲</span></div>
+                <button class="btn-success" style="width: 100%; padding: 10px; font-size: 14px;" onclick="rollDice()" data-i18n="rollDice">Losuj</button>
+            </div>
+            
+            <div class="timer-panel">
+                <div class="timer-display" id="timerDisplay">00:30</div>
+                <div class="timer-controls">
+                    <button class="btn-secondary" onclick="adjTimer(-10)">-10</button>
+                    <button class="btn-primary" id="timerBtn" onclick="toggleTimer()" data-i18n="timerStart">Start</button>
+                    <button class="btn-secondary" onclick="adjTimer(10)">+10</button>
+                </div>
+            </div>
+        </div>
+
+        <button class="btn-primary" style="width: 100%; padding: 10px;" onclick="addPlayer()" data-i18n="addPlayer">+ Dodaj Gracza</button>
+        
+        <div id="playersList" style="display: flex; flex-direction: column; gap: 10px; margin-top: 5px;">
+            <!-- Karty graczy renderowane w JS -->
+        </div>
+
+        <div class="log-panel">
+            <h3 data-i18n="gameLogTitle">📋 Log Rozgrywki</h3>
+            <div class="log-controls">
+                <button class="btn-primary" onclick="exportLog()" data-i18n="exportLogBtn">Pobierz .md</button>
+                <button class="btn-secondary" onclick="copyLogToClipboard()" data-i18n="copyLogBtn">Kopiuj</button>
+                <button class="btn-danger" onclick="clearLog()" data-i18n="clearLogBtn">Wyczyść</button>
+            </div>
+            <div id="logStatusText" data-i18n="logPlaceholder">Brak pytań w logu. Rozpocznij grę!</div>
+        </div>
+    </div>
+    
+    <div id="customModal" class="sidebar-overlay" style="z-index: 1000; align-items: center; justify-content: center;">
+        <div class="custom-modal-box" onclick="event.stopPropagation()">
+            <p id="customModalMessage" class="custom-modal-msg"></p>
+            <div id="customModalButtons" class="custom-modal-btns"></div>
+        </div>
+    </div>
+    
+    <script src="js/i18n.js"></script>
+    <script src="js/prompts.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
