@@ -1,5 +1,7 @@
 # Trivia Question Generator
 
+https://ventus34.github.io/trivia-question-generator/
+
 An interactive Trivia question generator integrated with Large Language Models (LLMs) via APIs (OpenRouter, OpenAI, LM Studio, Ollama). The application is designed for tablet screens (e.g., iPad) and desktop computers, serving as an assistant for Trivia games.
 
 ## Key Features
